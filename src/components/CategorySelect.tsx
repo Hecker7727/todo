@@ -8,7 +8,6 @@ import {
 } from "@mui/icons-material";
 import {
   Box,
-  Button,
   Divider,
   FormControl,
   FormLabel,
@@ -342,25 +341,6 @@ const SelectedNames = styled.div`
   font-size: 15px;
   word-break: break-all;
   max-width: 300px;
-`;
-
-const NoCategories = styled(MenuItem)`
-  opacity: 1 !important;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  margin: 12px 0;
-  gap: 6px;
-  cursor: default !important;
-  & p {
-    margin: 20px 0 32px 0;
-  }
-  &:hover {
-    background: transparent !important;
-  }
 `;
 
 const StyledListSubheader = styled(ListSubheader)`
