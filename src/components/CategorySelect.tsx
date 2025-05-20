@@ -19,7 +19,7 @@ import {
   ListSubheader,
 } from "@mui/material";
 import { Emoji } from "emoji-picker-react";
-import { CSSProperties, useContext, useState } from "react";
+import { CSSProperties, useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { CategoryBadge } from ".";
 import { MAX_CATEGORIES_IN_TASK } from "../constants";
@@ -47,8 +47,18 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
   fontColor,
 }) => {
   const { user } = useContext(UserContext);
-  const { categories, emojisStyle, favoriteCategories } = user;
-  const [selectedCats, setSelectedCats] = useState<Category[]>(selectedCategories);
+  const categories = user?.categories || [];
+  const favoriteCategories = user?.favoriteCategories || [];
+  const emojisStyle = user?.emojisStyle || "apple";
+  const [selectedCats, setSelectedCats] = useState<Category[]>(Array.isArray(selectedCategories) ? selectedCategories : []);
+
+  // Ensure selectedCats is always an array
+  useEffect(() => {
+    if (!Array.isArray(selectedCats)) {
+      setSelectedCats([]);
+    }
+  }, [selectedCats]);
+
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const muiTheme = useTheme();
@@ -77,6 +87,9 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
     (cat) => !favoriteCategories || !favoriteCategories.includes(cat.id),
   );
 
+  // Ensure we have a valid array before rendering
+  const safeSelectedCats = Array.isArray(selectedCats) ? selectedCats : [];
+
   return (
     <FormControl sx={{ width: width || "100%" }}>
       <FormLabel
@@ -92,7 +105,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
       <StyledSelect
         multiple
         width={width}
-        value={selectedCats.map((cat) => cat.id)}
+        value={safeSelectedCats.map((cat) => cat.id)}
         onChange={handleCategoryChange}
         open={isOpen}
         onOpen={() => setIsOpen(true)}
@@ -113,9 +126,9 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
         )}
         displayEmpty
         renderValue={() =>
-          selectedCats.length > 0 ? (
+          safeSelectedCats.length > 0 ? (
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: "4px 8px" }}>
-              {selectedCats.map((category) => (
+              {safeSelectedCats.map((category) => (
                 <CategoryBadge
                   key={category.id}
                   category={category}
@@ -134,7 +147,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
               maxHeight: 450,
               zIndex: 999999,
               padding: "0px 8px",
-              background: isDarkMode(user.darkmode, systemTheme, muiTheme.palette.secondary.main)
+              background: isDarkMode(user?.darkmode || "auto", systemTheme, muiTheme.palette.secondary.main)
                 ? "#2f2f2f"
                 : "#ffffff",
             },
@@ -149,11 +162,11 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
               clr={category.color}
               translate="no"
               disable={
-                selectedCats.length >= MAX_CATEGORIES_IN_TASK &&
-                !selectedCats.some((cat) => cat.id === category.id)
+                safeSelectedCats.length >= MAX_CATEGORIES_IN_TASK &&
+                !safeSelectedCats.some((cat) => cat.id === category.id)
               }
             >
-              {selectedCats.some((cat) => cat.id === category.id) && <RadioButtonChecked />}
+              {safeSelectedCats.some((cat) => cat.id === category.id) && <RadioButtonChecked />}
               {category.emoji && <Emoji unified={category.emoji} emojiStyle={emojisStyle} />}
               &nbsp;
               {category.name}
@@ -164,7 +177,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
             headerText: React.ReactElement | string,
             headerId: string,
           ) => {
-            if (cats.length === 0) return [];
+            if (!cats || cats.length === 0) return [];
 
             return [
               <StyledListSubheader key={headerId}>{headerText}</StyledListSubheader>,
@@ -182,7 +195,7 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
                       style={{
                         transition: ".3s color",
                         color:
-                          selectedCats.length >= MAX_CATEGORIES_IN_TASK
+                          safeSelectedCats.length >= MAX_CATEGORIES_IN_TASK
                             ? "#f34141"
                             : "currentcolor",
                       }}
@@ -192,51 +205,73 @@ export const CategorySelect: React.FC<CategorySelectProps> = ({
                   </b>
                   <SelectedNames>
                     Selected:{" "}
-                    {selectedCats.length > 0 ? (
+                    {safeSelectedCats.length > 0 ? (
                       new Intl.ListFormat("en", {
                         style: "long",
                         type: "conjunction",
-                      }).format(selectedCats.map((category) => category.name))
+                      }).format(safeSelectedCats.map((category) => category.name))
                     ) : (
-                      <span style={{ fontStyle: "italic" }}>none</span>
+                      "None"
                     )}
                   </SelectedNames>
                 </div>
               </HeaderMenuItem>,
               ...createCategoryGroup(
                 favoriteCats,
-                <>
-                  <StarRounded color="warning" sx={{ fontSize: "18px" }} />
-                  &nbsp;Favorite Categories
-                </>,
-                "header-favorites",
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <StarRounded sx={{ fontSize: "18px" }} /> Favorite Categories
+                </div>,
+                "favorite-categories",
               ),
-              ...createCategoryGroup(
-                otherCats,
-                favoriteCats.length > 0 ? "Other Categories" : "",
-                "header-others",
-              ),
-              <div key="footer" style={{ margin: "8px" }}>
-                <Divider sx={{ mb: "12px", mt: "16px" }} />
-                <Link to="/categories">
-                  <Button fullWidth variant="outlined" sx={{ mb: "8px", mt: "2px" }}>
-                    <EditRounded /> &nbsp; Modify Categories
-                  </Button>
-                </Link>
-              </div>,
-            ];
-          } else {
-            return [
-              <NoCategories key="no-categories" disableTouchRipple>
-                <p>You don't have any categories</p>
-                <Link to="/categories" style={{ width: "100%" }}>
-                  <Button fullWidth variant="outlined">
-                    <AddRounded /> &nbsp; Create Category
-                  </Button>
-                </Link>
-              </NoCategories>,
+              ...createCategoryGroup(otherCats, "Other Categories", "other-categories"),
+              <Divider key="divider" sx={{ margin: "8px 0" }} />,
+              <Link
+                to="/categories"
+                style={{ textDecoration: "none", color: "inherit" }}
+                key="manage-categories"
+              >
+                <MenuItem
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    margin: "4px 0",
+                    color: muiTheme.palette.primary.main,
+                  }}
+                >
+                  <EditRounded /> Manage Categories
+                </MenuItem>
+              </Link>,
             ];
           }
+
+          return [
+            <HeaderMenuItem key="header-info" disabled>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                <b>No Categories</b>
+                <span style={{ fontSize: "14px" }}>
+                  Create categories to organize your tasks
+                </span>
+              </div>
+            </HeaderMenuItem>,
+            <Link
+              to="/categories"
+              style={{ textDecoration: "none", color: "inherit" }}
+              key="create-category"
+            >
+              <MenuItem
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  margin: "4px 0",
+                  color: muiTheme.palette.primary.main,
+                }}
+              >
+                <AddRounded /> Create New Category
+              </MenuItem>
+            </Link>,
+          ];
         })()}
       </StyledSelect>
     </FormControl>

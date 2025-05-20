@@ -19,15 +19,32 @@ export function useStorageState<T>(
 
   // Initialize state with the stored value or the default value
   const [value, setValue] = useState<T>(() => {
-    const storedValue = storage.getItem(key);
-    return storedValue !== null && storedValue !== undefined && storedValue !== "undefined"
-      ? JSON.parse(storedValue)
-      : defaultValue;
+    try {
+      const storedValue = storage.getItem(key);
+      if (storedValue !== null && storedValue !== undefined && storedValue !== "undefined") {
+        const parsedValue = JSON.parse(storedValue);
+        // Ensure all required fields from defaultValue are present
+        if (typeof parsedValue === "object" && parsedValue !== null) {
+          return {
+            ...defaultValue,
+            ...parsedValue,
+          };
+        }
+        return parsedValue;
+      }
+    } catch (error) {
+      console.error("Error reading from storage:", error);
+    }
+    return defaultValue;
   });
 
   // Update storage whenever the key or value changes
   useEffect(() => {
-    storage.setItem(key, JSON.stringify(value));
+    try {
+      storage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error("Error writing to storage:", error);
+    }
   }, [key, value, storage]);
 
   // This allows to synchronize localStorage between tabs in real time
@@ -36,7 +53,12 @@ export function useStorageState<T>(
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === key && event.newValue !== null && event.key !== "") {
-        setValue(JSON.parse(event.newValue));
+        try {
+          const newValue = JSON.parse(event.newValue);
+          setValue(newValue);
+        } catch (error) {
+          console.error("Error parsing storage event value:", error);
+        }
       }
     };
 

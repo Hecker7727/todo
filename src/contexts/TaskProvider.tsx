@@ -1,4 +1,4 @@
-import { ReactNode, useState, useCallback, useMemo } from "react";
+import { ReactNode, useState, useCallback, useMemo, useEffect } from "react";
 import { UUID } from "../types/user";
 import { useStorageState } from "../hooks/useStorageState";
 import { HighlightedText } from "../components/tasks/tasks.styled";
@@ -21,6 +21,13 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
   const isMobile = useResponsiveDisplay();
 
+  // Ensure multipleSelectedTasks is always an array
+  useEffect(() => {
+    if (!Array.isArray(multipleSelectedTasks)) {
+      setMultipleSelectedTasks([]);
+    }
+  }, [multipleSelectedTasks, setMultipleSelectedTasks]);
+
   // Use useCallback for all functions to prevent recreation on each render
   const toggleShowMore = useCallback((taskId: UUID) => {
     setExpandedTasks((prevExpandedTasks) => {
@@ -38,6 +45,9 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
     (taskId: UUID) => {
       setAnchorEl(null);
       setMultipleSelectedTasks((prevSelectedTaskIds) => {
+        if (!Array.isArray(prevSelectedTaskIds)) {
+          return [taskId];
+        }
         if (prevSelectedTaskIds.includes(taskId)) {
           // Deselect the task if already selected
           return prevSelectedTaskIds.filter((id) => id !== taskId);
@@ -99,7 +109,7 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
       search,
       setSearch,
       highlightMatchingText,
-      multipleSelectedTasks,
+      multipleSelectedTasks: Array.isArray(multipleSelectedTasks) ? multipleSelectedTasks : [],
       setMultipleSelectedTasks,
       handleSelectTask,
       editModalOpen,

@@ -29,7 +29,7 @@ export const GlobalStyles = () => {
           -moz-osx-font-smoothing: grayscale;
           -webkit-text-size-adjust: 100%;
           --rsbs-backdrop-bg: rgba(0, 0, 0, 0.3);
-          --rsbs-bg: ${theme.darkmode ? "#383838" : "#ffffff"};
+          --rsbs-bg: ${theme.darkmode ? ColorPalette.darkMode : ColorPalette.lightMode};
         }
         input[type="datetime-local"]:placeholder-shown {
           color: transparent !important;
@@ -74,20 +74,22 @@ export const GlobalStyles = () => {
           box-shadow: none;
         }
         body {
-          margin: 8px 16vw;
+          margin: 0;
+          padding: 0;
+          min-height: 100vh;
           touch-action: manipulation;
           background: ${theme.secondary};
           background-attachment: fixed;
           background-size: cover;
           transition: 0.3s background;
           @media (max-width: 1024px) {
-            margin: 20px;
+            margin: 0;
+            padding: 0;
           }
 
           /* Custom Scrollbar Styles */
           ::-webkit-scrollbar {
             width: 8px;
-
             background-color: ${theme.secondary};
           }
 

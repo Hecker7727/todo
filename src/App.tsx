@@ -1,7 +1,7 @@
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react";
 import { DataObjectRounded, DeleteForeverRounded } from "@mui/icons-material";
-import { ThemeProvider as MuiThemeProvider, type Theme } from "@mui/material";
-import { useCallback, useContext, useEffect } from "react";
+import { ThemeProvider as MuiThemeProvider, type Theme, CircularProgress } from "@mui/material";
+import { useCallback, useContext, useEffect, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import MainLayout from "./layouts/MainLayout";
 import { CustomToaster } from "./components/Toaster";
@@ -17,11 +17,11 @@ import { GlobalQuickSaveHandler } from "./components/GlobalQuickSaveHandler";
 function App() {
   const { user, setUser } = useContext(UserContext);
   const systemTheme = useSystemTheme();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isThemeReady, setIsThemeReady] = useState(false);
 
   // Initialize user properties if they are undefined
-  // this allows to add new properties to the user object without error
   const updateNestedProperties = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (userObject: any, defaultObject: any) => {
       if (!userObject) {
         return defaultObject;
@@ -33,7 +33,7 @@ function App() {
         }
         if (
           key === "colorList" &&
-          user.colorList &&
+          user?.colorList &&
           !defaultUser.colorList.every((element, index) => element === user.colorList[index])
         ) {
           return;
@@ -55,11 +55,12 @@ function App() {
           userObject[key] = updateNestedProperties(userValue, defaultValue);
         } else if (userValue === undefined) {
           userObject[key] = defaultValue;
+          const valueToShow = userObject[key] !== null ? userObject[key].toString() : "null";
           showToast(
             <div>
               Added new property to user object{" "}
               <i translate="no">
-                {key.toString()}: {userObject[key].toString()}
+                {key.toString()}: {valueToShow}
               </i>
             </div>,
             {
@@ -73,15 +74,21 @@ function App() {
 
       return userObject;
     },
-    [user.colorList],
+    [user?.colorList],
   );
 
   useEffect(() => {
-    setUser((prevUser) => {
-      const updatedUser = updateNestedProperties({ ...prevUser }, defaultUser);
-      return prevUser !== updatedUser ? updatedUser : prevUser;
-    });
-  }, [setUser, user.colorList, updateNestedProperties]);
+    try {
+      setUser((prevUser) => {
+        const updatedUser = updateNestedProperties({ ...prevUser }, defaultUser);
+        return prevUser !== updatedUser ? updatedUser : prevUser;
+      });
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error initializing user:", error);
+      setIsLoading(false);
+    }
+  }, [setUser, user?.colorList, updateNestedProperties]);
 
   useEffect(() => {
     const setBadge = async (count: number) => {
@@ -105,9 +112,9 @@ function App() {
     };
 
     const displayAppBadge = async () => {
-      if (user.settings.appBadge) {
+      if (user?.settings?.appBadge) {
         if ((await Notification.requestPermission()) === "granted") {
-          const incompleteTasksCount = user.tasks.filter((task) => !task.done).length;
+          const incompleteTasksCount = user?.tasks?.filter((task) => !task.done).length ?? 0;
           if (!isNaN(incompleteTasksCount)) {
             setBadge(incompleteTasksCount);
           }
@@ -120,42 +127,64 @@ function App() {
     if ("setAppBadge" in navigator) {
       displayAppBadge();
     }
-  }, [user.settings.appBadge, user.tasks]);
+  }, [user?.settings?.appBadge, user?.tasks]);
+
+  // Wait for system theme to be detected
+  useEffect(() => {
+    if (systemTheme !== "unknown") {
+      setIsThemeReady(true);
+    }
+  }, [systemTheme]);
 
   const getMuiTheme = useCallback((): Theme => {
     if (systemTheme === "unknown") {
       return Themes[0].MuiTheme;
     }
-    if (user.theme === "system") {
+    if (user?.theme === "system") {
       return systemTheme === "dark" ? Themes[0].MuiTheme : Themes[1].MuiTheme;
     }
-    const selectedTheme = Themes.find((theme) => theme.name === user.theme);
+    const selectedTheme = Themes.find((theme) => theme.name === user?.theme);
     return selectedTheme ? selectedTheme.MuiTheme : Themes[0].MuiTheme;
-  }, [systemTheme, user.theme]);
+  }, [systemTheme, user?.theme]);
 
   useEffect(() => {
     const themeColorMeta = document.querySelector("meta[name=theme-color]");
     if (themeColorMeta) {
       themeColorMeta.setAttribute("content", getMuiTheme().palette.secondary.main);
     }
-  }, [user.theme, getMuiTheme]);
+  }, [user?.theme, getMuiTheme]);
+
+  if (isLoading || !isThemeReady) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#ffffff'
+      }}>
+        <CircularProgress />
+      </div>
+    );
+  }
+
+  const currentTheme = getMuiTheme();
+  const isDark = isDarkMode(user?.darkmode || "auto", systemTheme, currentTheme.palette.secondary.main);
 
   return (
     <MuiThemeProvider
       theme={createCustomTheme(
-        getMuiTheme().palette.primary.main,
-        getMuiTheme().palette.secondary.main,
-        isDarkMode(user.darkmode, systemTheme, getMuiTheme().palette.secondary.main)
-          ? "dark"
-          : "light",
+        currentTheme.palette.primary.main,
+        currentTheme.palette.secondary.main,
+        isDark ? "dark" : "light",
       )}
     >
       <EmotionThemeProvider
         theme={{
-          primary: getMuiTheme().palette.primary.main,
-          secondary: getMuiTheme().palette.secondary.main,
-          darkmode: isDarkMode(user.darkmode, systemTheme, getMuiTheme().palette.secondary.main),
-          mui: getMuiTheme(),
+          primary: currentTheme.palette.primary.main,
+          secondary: currentTheme.palette.secondary.main,
+          darkmode: isDark,
+          mui: currentTheme,
         }}
       >
         <GlobalStyles />
