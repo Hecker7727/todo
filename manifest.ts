@@ -9,7 +9,7 @@ const manifest: Partial<ManifestOptions> = {
   theme_color: "#7764E8",
   background_color: "#171D34",
   description:
-    "Todo app with many features, including sharing tasks via link, theme customization and offline usage as a PWA. Made by github.com/maciekt07",
+    "Todo app with many features, including sharing tasks via link, theme customization and offline usage as a PWA",
   categories: ["productivity", "utilities", "lifestyle"],
   edge_side_panel: {
     preferred_width: 500,
