@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "dev.pages.sc_todo.twa",
+        "sha256_cert_fingerprints": ["4D:40:25:8F:4C:1D:4C:84:36:28:EB:75:B4:75:BE:08:C6:40:DA:EE:3A:DB:48:21:E5:E9:5F:50:E0:20:25:52"]
+      }
+    }]
